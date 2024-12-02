@@ -17,7 +17,7 @@ def parse_args():
     parser.add_argument('--step_size', type=int, default=1)
     parser.add_argument('--batch_size', type=int, default=512)
     parser.add_argument('--n_gnn', type=int, default=1)
-    parser.add_argument('--gsl_type', type=str, default='tanh')
+    parser.add_argument('--gsl_type', type=str, default='directed')
     parser.add_argument('--n_hidden', type=int, default=1024)
     parser.add_argument('--alpha', type=float, default=0.1)
     parser.add_argument('--k', type=int, default=None)
