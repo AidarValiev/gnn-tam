@@ -37,11 +37,13 @@ class GNN_TAM(nn.Module):
         super(GNN_TAM, self).__init__()
         self.window_size = hyper_params.window_size
         self.nhidden = hyper_params.n_hidden
-        self.idx = nn.Buffer(torch.arange(hyper_params.n_nodes), persistent=False)
+        total_nodes = hyper_params.n_nodes + hyper_params.k_additional
+        self.k_additional = hyper_params.k_additional
+        self.idx = nn.Buffer(torch.arange(total_nodes), persistent=False)
         self.adj = [0 for i in range(hyper_params.n_gnn)]
         self.h = [0 for i in range(hyper_params.n_gnn)]
         self.skip = [0 for i in range(hyper_params.n_gnn)]
-        self.z = nn.Buffer(torch.ones(hyper_params.n_nodes, hyper_params.n_nodes) - torch.eye(hyper_params.n_nodes), persistent=False)
+        self.z = nn.Buffer(torch.ones(total_nodes, total_nodes) - torch.eye(total_nodes), persistent=False)
         self.n_gnn = hyper_params.n_gnn
 
         self.gsl = nn.ModuleList()
@@ -52,15 +54,17 @@ class GNN_TAM(nn.Module):
 
         for i in range(self.n_gnn):
             self.gsl.append(GSL(hyper_params.gsl_type, hyper_params.n_nodes,
-                                hyper_params.window_size, hyper_params.alpha, hyper_params.k))
+                                hyper_params.window_size, hyper_params.alpha, hyper_params.k, hyper_params.split_by, hyper_params.k_additional))
             self.conv1.append(GCLayer(hyper_params.window_size, hyper_params.n_hidden))
-            self.bnorm1.append(nn.BatchNorm1d(hyper_params.n_nodes))
+            self.bnorm1.append(nn.BatchNorm1d(total_nodes))
             self.conv2.append(GCLayer(hyper_params.n_hidden, hyper_params.n_hidden))
-            self.bnorm2.append(nn.BatchNorm1d(hyper_params.n_nodes))
+            self.bnorm2.append(nn.BatchNorm1d(total_nodes))
 
         self.fc = nn.Linear(hyper_params.n_gnn*hyper_params.n_hidden, hyper_params.n_classes)
 
     def forward(self, X):
+        if self.k_additional:
+            X = nn.functional.pad(X, (0, 0, 0, self.k_additional), mode='constant', value=0)
         for i in range(self.n_gnn):
             self.adj[i] = self.gsl[i](self.idx)
             self.adj[i] = self.adj[i] * self.z

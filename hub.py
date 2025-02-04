@@ -3,9 +3,11 @@ from pathlib import Path
 
 import click
 import pickle
+import torch
 from prettytable import PrettyTable
 
 from common_types import TAMHyperParameters, TrainingSettings, CheckpointInfo
+from gnn import GNN_TAM
 
 
 @click.group()
@@ -49,8 +51,23 @@ def checkpoints():
                 time.strftime('%H:%M:%S', time.gmtime(checkpoint_info.total_seconds_elapsed//checkpoint_info.epochs_elapsed))
             ])
     print(table)
-            
-            
+
+@cli.command()
+@click.option('--checkpoint_id')
+def print_adj(checkpoint_id):
+    instance_dir = Path('saved_models') / checkpoint_id.split('_')[0]
+    checkpoint_dir = Path('saved_models', *checkpoint_id.split('_'))
+    with open(instance_dir/'hyperparams.pkl', mode='rb') as hyperparams_file:
+        hyper_params: TAMHyperParameters = pickle.load(hyperparams_file)
+    with open(instance_dir/'training_settings.pkl', mode='rb') as training_settings_file:
+        training_settings: TrainingSettings = pickle.load(training_settings_file)
+    
+    # Load saved model:
+    state = torch.load(checkpoint_dir/'state.pt')
+    model = GNN_TAM(hyper_params=hyper_params)
+    model.load_state_dict(state['model_state'])
+    with torch.no_grad():
+        print(model.gsl[0](model.idx)*model.z)
 
 
 if __name__ == '__main__':

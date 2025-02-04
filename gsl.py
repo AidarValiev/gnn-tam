@@ -94,6 +94,34 @@ class Graph_Undirected_A(nn.Module):
         return adj
 
 
+class Graph_Type_Aware(nn.Module):
+    def __init__(self, n_nodes, window_size, alpha, split_by, k_additional):
+        super(Graph_Type_Aware, self).__init__()
+        self.alpha = alpha
+        self.e1 = nn.Embedding(n_nodes+k_additional, window_size)
+        self.l1 = nn.Linear(window_size, window_size)
+        self.split_by = split_by
+        g1 = torch.zeros(n_nodes+k_additional, dtype=int)
+        g2 = torch.zeros(n_nodes+k_additional, dtype=int)
+        g1[self.split_by[0]] = 1
+        g2[self.split_by[1]] = 1
+        self.restrictions = nn.Buffer(
+            1 - g1[..., None]*g2[None, ...] + g2[..., None]*g1[None, ...]
+        )
+        self.k_additional = k_additional
+        
+
+    def forward(self, idx):
+        m1 = torch.tanh(self.alpha*self.l1(self.e1(idx)))
+        m2 = torch.tanh(self.alpha*self.l1(self.e1(idx)))
+        adj = F.relu(torch.tanh(self.alpha*torch.mm(m1, m2.transpose(1, 0))))
+        adj = adj*self.restrictions
+        return adj
+        
+
+
+
+
 class GSL(nn.Module):
     """
     Graph structure learning block.
@@ -105,6 +133,8 @@ class GSL(nn.Module):
             window_size,
             alpha,
             k,
+            split_by,
+            k_additional,
     ):
         super().__init__()
         self.gsl_layer = None
@@ -119,6 +149,8 @@ class GSL(nn.Module):
         elif gsl_type == 'undirected':
             self.gsl_layer = Graph_Undirected_A(n_nodes, window_size,
                                                      alpha, k)
+        elif gsl_type == 'type_aware':
+            self.gsl_layer = Graph_Type_Aware(n_nodes, window_size, alpha, split_by, k_additional)
         else:
             assert False, f'Wrong name of graph structure learning layer: {gsl_type}'
 

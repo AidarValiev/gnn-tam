@@ -32,6 +32,7 @@ def parse_args():
     parser.add_argument('--n_hidden', type=int, default=1024)
     parser.add_argument('--alpha', type=float, default=0.1)
     parser.add_argument('--k', type=int, default=None)
+    parser.add_argument('--k_additional', type=int, default=None)
     parser.add_argument('--name', type=str, default='gnn')
     parser.add_argument('--checkpoint_every_n_epochs', type=int, default=5)
     parser.add_argument('--tensorboard_enabled', type=bool, default=False)
@@ -109,6 +110,12 @@ def save_model(
         instance_dir=instance_dir,
     )
 
+def get_split_by(dataset: FDDDataset):
+    return (
+        list(list(range(53))[:41]),
+        list(list(range(53))[41:]),
+    ) 
+
 
 def train():
     args = parse_args()
@@ -156,6 +163,8 @@ def train():
         n_hidden=args.n_hidden,
         alpha=args.alpha,
         k=args.k,
+        split_by=get_split_by(dataset),
+        k_additional=args.k_additional,
     )
     model = GNN_TAM(hyper_params=hyper_parameters)
     model.to(device)
@@ -201,8 +210,9 @@ def train():
         checkpoint_info.epochs_elapsed += 1
         checkpoint_info.total_seconds_elapsed = time.time() - start_time
         checkpoint_info.train_loss = train_avg_loss
+        checkpoint_info.train_loss_history.append(train_avg_loss)
         scheduler.step(train_avg_loss) # TODO: Change to validation loss
-        if (e + 1) % training_settings.checkpoint_every_n_epochs == 0:
+        if (e + 1) % training_settings.checkpoint_every_n_epochs == 0 and (e+1) != args.n_epochs:
             save_model(
                 model=model,
                 optimizer=optimizer,

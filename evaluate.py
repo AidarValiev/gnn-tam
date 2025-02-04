@@ -39,7 +39,7 @@ def inference():
     # Data preparation:
     dataset = FDDDataset(name=training_settings.dataset)
     scaler = StandardScaler()
-    scaler.fit(dataset.df[dataset.test_mask])
+    scaler.fit(dataset.df[dataset.train_mask])
     dataset.df[:] = scaler.transform(dataset.df)
     test_dl = FDDDataloader(
         dataframe=dataset.df,

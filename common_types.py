@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -6,6 +6,7 @@ class CheckpointInfo:
     epochs_elapsed: int = 0
     total_seconds_elapsed: int = 0
     train_loss: float | None = None
+    train_loss_history: list[float] = field(default_factory=list)
     validation_loss: float | None = None
 
 @dataclass
@@ -35,3 +36,5 @@ class TAMHyperParameters:
     n_hidden: int = 1024
     alpha: float = 0.1
     k: int | None = None
+    split_by: tuple[list[int]] | None = None
+    k_additional: int | None = None
