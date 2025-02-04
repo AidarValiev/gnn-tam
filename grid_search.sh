@@ -1,6 +1,6 @@
 #!/bin/bash
 
-python3 -m venv environment
+python3.11 -m venv environment
 source environment/bin/activate
 pip install -r requirements.txt
 
